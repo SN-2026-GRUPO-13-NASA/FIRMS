@@ -1,6 +1,6 @@
-// Configurações do Supabase (Substitua pelas suas credenciais reais caso aplicável)
-const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
-const SUPABASE_ANON_KEY = "SUA_CHAVE_ANON_AQUI";
+// Configurações do Supabase do Projeto Grupo 13
+const SUPABASE_URL = "https://mnedtkhjfaygtvoaxfka.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_aw0HvUP7GyAU3nnwP0N4oA_UJuMmw6k";      // Cole a chave anon
 
 let allData = [];
 let filteredData = [];
