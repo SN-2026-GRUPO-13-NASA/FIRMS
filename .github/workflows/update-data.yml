@@ -1,0 +1,3 @@
+git add .
+git commit -m "Adiciona workflow do GitHub Actions"
+git push
