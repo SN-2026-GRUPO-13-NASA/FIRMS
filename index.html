@@ -3,142 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASA FIRMS - Monitoramento de Focos de Incêndio</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Painel NASA FIRMS - Monitoramento de Incêndios</title>
+    <!-- Vinculação do CSS externo -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Cabeçalho -->
-        <header class="main-header">
-            <div class="brand">
-                <i class="fa-solid fa-fire-flame-curved brand-icon"></i>
-                <div class="brand-text">
-                    <h1>NASA FIRMS Monitor</h1>
-                    <span class="sub-title">Grupo 13 | Sistema de Detecção de Focos de Incêndio</span>
-                </div>
-            </div>
-            <div class="header-status">
-                <div class="status-indicator">
-                    <span class="status-dot" id="status-dot"></span>
-                    <span id="status-text">Carregando status...</span>
-                </div>
-                <button id="btn-refresh" class="btn btn-secondary">
-                    <i class="fa-solid fa-arrows-rotate"></i> Atualizar
-                </button>
-            </div>
-        </header>
 
-        <!-- Cartões de Métricas (KPIs) -->
-        <section class="kpi-grid">
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-fire"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Total de Focos (24h)</span>
-                    <span class="kpi-value" id="kpi-total">0</span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-bolt"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Maior Potência Radiativa (FRP)</span>
-                    <span class="kpi-value" id="kpi-max-frp">0.0 <small>MW</small></span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-satellite"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Satélite Predominante</span>
-                    <span class="kpi-value" id="kpi-sat">--</span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Confiança Média</span>
-                    <span class="kpi-value" id="kpi-conf">0%</span>
-                </div>
-            </div>
-        </section>
+<div class="container">
+    <header>
+        <h1>🔥 Painel de Detecção de Incêndios (NASA FIRMS)</h1>
+        <div class="status-card">
+            Última Atualização do Pipeline: <span id="last-update">Carregando...</span>
+        </div>
+    </header>
 
-        <!-- Painel Principal: Mapa e Tabela -->
-        <main class="main-content">
-            <!-- Container do Mapa Canvas -->
-            <section class="map-section card">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-map-location-dot"></i> Visualização Geoespacial</h2>
-                    <span class="card-subtitle">Localização aproximada dos focos detectados</span>
-                </div>
-                <div class="canvas-container">
-                    <canvas id="fire-map"></canvas>
-                    <div class="map-legend">
-                        <span><i class="legend-dot low"></i> Baixo FRP (&lt;50 MW)</span>
-                        <span><i class="legend-dot med"></i> Médio (50-150 MW)</span>
-                        <span><i class="legend-dot high"></i> Alto (&gt;150 MW)</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Barra de Controles e Filtros -->
-            <section class="filter-section card">
-                <div class="filter-group">
-                    <label for="filter-satellite"><i class="fa-solid fa-satellite"></i> Satélite:</label>
-                    <select id="filter-satellite" class="form-control">
-                        <option value="ALL">Todos os Satélites</option>
-                        <option value="N">VIIRS (SNPP / NOAA)</option>
-                        <option value="T">Terra (MODIS)</option>
-                        <option value="A">Aqua (MODIS)</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="filter-frp"><i class="fa-solid fa-gauge-high"></i> FRP Mínimo (MW): <strong id="frp-val">0</strong></label>
-                    <input type="range" id="filter-frp" min="0" max="300" value="0" class="form-range">
-                </div>
-
-                <div class="filter-group search-group">
-                    <input type="text" id="filter-search" class="form-control" placeholder="Buscar por data ou coordenada...">
-                </div>
-
-                <button id="btn-reset-filters" class="btn btn-outline">Limpar Filtros</button>
-            </section>
-
-            <!-- Tabela de Dados -->
-            <section class="table-section card">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-table"></i> Registros Recentes de Focos</h2>
-                    <span class="card-subtitle" id="table-count">Exibindo 0 registros</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th class="text-left">Data</th>
-                                <th class="text-left">Hora (UTC)</th>
-                                <th class="text-right">Latitude</th>
-                                <th class="text-right">Longitude</th>
-                                <th class="text-left">Satélite</th>
-                                <th class="text-center">Confiança</th>
-                                <th class="text-right">FRP (MW)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body">
-                            <tr>
-                                <td colspan="7" class="text-center loading-cell">A carregar dados do Supabase...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
-
-        <!-- Rodapé -->
-        <footer class="main-footer">
-            <p>SN-2026-GRUPO-13-NASA | FIRMS API Integration</p>
-        </footer>
+    <div class="controls">
+        <label for="sat-filter">Filtrar por Satélite:</label>
+        <select id="sat-filter" onchange="applyFilter()">
+            <option value="ALL">Todos os Satélites</option>
+            <option value="N">VIIRS (SNPP / NOAA)</option>
+            <option value="T">Terra (MODIS)</option>
+            <option value="A">Aqua (MODIS)</option>
+        </select>
     </div>
 
-    <script src="app.js"></script>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Hora (UTC)</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Satélite</th>
+                    <th>Confiança</th>
+                    <th>FRP (MW)</th>
+                </tr>
+            </thead>
+            <tbody id="data-table">
+                <tr><td colspan="7" style="text-align: center;">Carregando registros...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Configuração das Credenciais Públicas do Supabase
+    // Substitua com a URL do seu projeto e a sua 'anon' key do Supabase!
+    const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
+    const SUPABASE_ANON_KEY = "SUA_CHAVE_ANON_AQUI";
+
+    let globalData = [];
+
+    // Função de sanitização obrigatória (Item 3.6 do Edital)
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Busca a última execução registrada na tabela 'execucoes'
+    async function loadLastExecution() {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/execucoes?select=data_execucao,status&order=data_execucao.desc&limit=1`, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const exec = data[0];
+                const dateObj = new Date(exec.data_execucao);
+                const formattedDate = dateObj.toLocaleString('pt-BR');
+                const statusClass = exec.status === 'concluido' ? 'status-concluido' : 'status-erro';
+                
+                document.getElementById('last-update').innerHTML = `
+                    ${escapeHtml(formattedDate)} 
+                    <span class="status-tag ${statusClass}">${escapeHtml(exec.status)}</span>
+                `;
+            } else {
+                document.getElementById('last-update').innerText = "Nenhuma execução registrada.";
+            }
+        } catch (err) {
+            document.getElementById('last-update').innerText = "Erro ao carregar execução.";
+        }
+    }
+
+    // Busca os focos de incêndio registrados na tabela 'firms_data'
+    async function loadFirmsData() {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/firms_data?select=*&order=acq_date.desc,acq_time.desc&limit=100`, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            globalData = await response.json();
+            renderTable(globalData);
+        } catch (err) {
+            document.getElementById('data-table').innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Erro ao carregar dados do Supabase.</td></tr>`;
+        }
+    }
+
+    // Renderiza a tabela com proteção contra XSS (escapeHtml)
+    function renderTable(data) {
+        const tbody = document.getElementById('data-table');
+        tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum registro encontrado.</td></tr>';
+            return;
+        }
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${escapeHtml(row.acq_date)}</td>
+                <td>${escapeHtml(row.acq_time)}</td>
+                <td>${escapeHtml(row.latitude)}</td>
+                <td>${escapeHtml(row.longitude)}</td>
+                <td>${escapeHtml(row.satellite)}</td>
+                <td>${escapeHtml(row.confidence)}</td>
+                <td>${escapeHtml(row.frp)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Filtro interativo no lado do cliente
+    function applyFilter() {
+        const selectedSat = document.getElementById('sat-filter').value;
+        if (selectedSat === 'ALL') {
+            renderTable(globalData);
+        } else {
+            const filtered = globalData.filter(item => item.satellite && item.satellite.includes(selectedSat));
+            renderTable(filtered);
+        }
+    }
+
+    // Inicialização ao carregar a página
+    loadLastExecution();
+    loadFirmsData();
+</script>
+
 </body>
 </html>
