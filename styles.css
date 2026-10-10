@@ -1,144 +1,339 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASA FIRMS - Monitoramento de Focos de Incêndio</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <div class="app-container">
-        <!-- Cabeçalho -->
-        <header class="main-header">
-            <div class="brand">
-                <i class="fa-solid fa-fire-flame-curved brand-icon"></i>
-                <div class="brand-text">
-                    <h1>NASA FIRMS Monitor</h1>
-                    <span class="sub-title">Grupo 13 | Sistema de Detecção de Focos de Incêndio</span>
-                </div>
-            </div>
-            <div class="header-status">
-                <div class="status-indicator">
-                    <span class="status-dot" id="status-dot"></span>
-                    <span id="status-text">Carregando status...</span>
-                </div>
-                <button id="btn-refresh" class="btn btn-secondary">
-                    <i class="fa-solid fa-arrows-rotate"></i> Atualizar
-                </button>
-            </div>
-        </header>
+:root {
+    --bg-dark: #0f172a;
+    --bg-card: #1e293b;
+    --bg-hover: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --primary: #ef4444;
+    --primary-hover: #dc2626;
+    --accent: #38bdf8;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --border: #334155;
+    --radius: 8px;
+}
 
-        <!-- Cartões de Métricas (KPIs) -->
-        <section class="kpi-grid">
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-fire"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Total de Focos (24h)</span>
-                    <span class="kpi-value" id="kpi-total">0</span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-bolt"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Maior Potência Radiativa (FRP)</span>
-                    <span class="kpi-value" id="kpi-max-frp">0.0 <small>MW</small></span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-satellite"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Satélite Predominante</span>
-                    <span class="kpi-value" id="kpi-sat">--</span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Confiança Média</span>
-                    <span class="kpi-value" id="kpi-conf">0%</span>
-                </div>
-            </div>
-        </section>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
 
-        <!-- Painel Principal: Mapa e Tabela -->
-        <main class="main-content">
-            <!-- Container do Mapa Canvas -->
-            <section class="map-section card">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-map-location-dot"></i> Visualização Geoespacial</h2>
-                    <span class="card-subtitle">Localização aproximada dos focos detectados</span>
-                </div>
-                <div class="canvas-container">
-                    <canvas id="fire-map"></canvas>
-                    <div class="map-legend">
-                        <span><i class="legend-dot low"></i> Baixo FRP (&lt;50 MW)</span>
-                        <span><i class="legend-dot med"></i> Médio (50-150 MW)</span>
-                        <span><i class="legend-dot high"></i> Alto (&gt;150 MW)</span>
-                    </div>
-                </div>
-            </section>
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    padding: 20px;
+    min-height: 100vh;
+}
 
-            <!-- Barra de Controles e Filtros -->
-            <section class="filter-section card">
-                <div class="filter-group">
-                    <label for="filter-satellite"><i class="fa-solid fa-satellite"></i> Satélite:</label>
-                    <select id="filter-satellite" class="form-control">
-                        <option value="ALL">Todos os Satélites</option>
-                        <option value="N">VIIRS (SNPP / NOAA)</option>
-                        <option value="T">Terra (MODIS)</option>
-                        <option value="A">Aqua (MODIS)</option>
-                    </select>
-                </div>
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
-                <div class="filter-group">
-                    <label for="filter-frp"><i class="fa-solid fa-gauge-high"></i> FRP Mínimo (MW): <strong id="frp-val">0</strong></label>
-                    <input type="range" id="filter-frp" min="0" max="300" value="0" class="form-range">
-                </div>
+/* Header */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-card);
+    padding: 16px 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
 
-                <div class="filter-group search-group">
-                    <input type="text" id="filter-search" class="form-control" placeholder="Buscar por data ou coordenada...">
-                </div>
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
 
-                <button id="btn-reset-filters" class="btn btn-outline">Limpar Filtros</button>
-            </section>
+.brand-icon {
+    font-size: 2rem;
+    color: var(--primary);
+}
 
-            <!-- Tabela de Dados -->
-            <section class="table-section card">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-table"></i> Registros Recentes de Focos</h2>
-                    <span class="card-subtitle" id="table-count">Exibindo 0 registros</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th class="text-left">Data</th>
-                                <th class="text-left">Hora (UTC)</th>
-                                <th class="text-right">Latitude</th>
-                                <th class="text-right">Longitude</th>
-                                <th class="text-left">Satélite</th>
-                                <th class="text-center">Confiança</th>
-                                <th class="text-right">FRP (MW)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body">
-                            <tr>
-                                <td colspan="7" class="text-center loading-cell">A carregar dados do Supabase...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
+.brand-text h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
 
-        <!-- Rodapé -->
-        <footer class="main-footer">
-            <p>SN-2026-GRUPO-13-NASA | FIRMS API Integration</p>
-        </footer>
-    </div>
+.sub-title {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
 
-    <script src="app.js"></script>
-</body>
-</html>
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+}
+
+.status-dot.online { background-color: var(--success); }
+.status-dot.error { background-color: var(--primary); }
+
+/* Buttons */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary {
+    background-color: var(--bg-hover);
+    color: var(--text-main);
+}
+
+.btn-secondary:hover {
+    background-color: #475569;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.btn-outline:hover {
+    color: var(--text-main);
+    border-color: var(--text-muted);
+}
+
+/* KPIs */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.kpi-card {
+    background-color: var(--bg-card);
+    padding: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.kpi-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.kpi-title {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+/* Cards & Layout */
+.card {
+    background-color: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.card-header h2 {
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Canvas Map */
+.canvas-container {
+    position: relative;
+    width: 100%;
+    height: 350px;
+    background-color: #090d16;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+#fire-map {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.map-legend {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(15, 23, 42, 0.85);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    display: flex;
+    gap: 12px;
+    border: 1px solid var(--border);
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+
+.legend-dot.low { background-color: #f59e0b; }
+.legend-dot.med { background-color: #f97316; }
+.legend-dot.high { background-color: #ef4444; }
+
+/* Filter Section */
+.filter-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    background-color: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 8px 12px;
+    border-radius: 6px;
+    outline: none;
+    height: 38px;
+}
+
+.search-group {
+    flex-grow: 1;
+    max-width: 300px;
+}
+
+.search-group input {
+    width: 100%;
+}
+
+.form-range {
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+/* Table */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table th {
+    background-color: var(--bg-dark);
+    color: var(--text-muted);
+    padding: 12px 16px;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+}
+
+.data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Alignments */
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-sat {
+    background-color: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
+}
+
+.badge-conf {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+/* Footer */
+.main-footer {
+    text-align: center;
+    padding: 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
