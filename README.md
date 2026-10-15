@@ -15,4 +15,4 @@ Este projeto consiste em um pipeline automatizado de extração, tratamento e ex
 - **Linguagens:** HTML5, CSS3, JavaScript (ES6+), Python 3.10, SQL
 - **Banco de Dados:** PostgreSQL (Supabase)
 - **CI/CD & Automação:** GitHub Actions
-- **Hospedagem:** GitHub Pages
+- **Hospedagem:** https://sn-2026-grupo-13-nasa.github.io/FIRMS/
