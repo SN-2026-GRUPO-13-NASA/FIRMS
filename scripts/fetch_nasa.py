@@ -7,28 +7,49 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from supabase import create_client, Client
 
-# Credenciais lidas dos Secrets do GitHub Actions
+# ---------------------------------------------------------------------------
+# CREDENCIAIS E VARIÁVEIS DE AMBIENTE
+# ---------------------------------------------------------------------------
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 FIRMS_MAP_KEY = os.environ.get("NASA_API_KEY")
 
 if not all([SUPABASE_URL, SUPABASE_KEY, FIRMS_MAP_KEY]):
-    print("Erro: Variáveis de ambiente (SUPABASE_URL, SUPABASE_SERVICE_KEY, NASA_API_KEY) não foram configuradas.")
+    print("Erro: As variáveis de ambiente (SUPABASE_URL, SUPABASE_SERVICE_KEY, NASA_API_KEY) não estão configuradas.")
     sys.exit(1)
 
+# Inicialização do cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
+# ---------------------------------------------------------------------------
+# FUNÇÕES AUXILIARES
+# ---------------------------------------------------------------------------
+def safe_float(val):
+    """
+    Converte um valor recebido para float de forma segura.
+    Evita que erros de conversão interrompam a execução do pipeline.
+    """
+    try:
+        return float(val) if val is not None and str(val).strip() != '' else None
+    except (ValueError, TypeError):
+        return None
+
+
 def create_http_session():
-    """Cria uma sessão HTTP com User-Agent customizado e politica de retentativas"""
+    """
+    Cria uma sessão HTTP com User-Agent personalizado e política de retentativas.
+    Previne falhas temporárias de rede ao ligar à API da NASA.
+    """
     session = requests.Session()
     session.headers.update({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     })
     
-    # Configura retentativas automáticas em falhas de conexão/rede
+    # Configuração de retentativas automáticas (2s, 4s, 8s de intervalo)
     retries = Retry(
         total=4,
-        backoff_factor=2, # Espera 2s, 4s, 8s entre tentativas
+        backoff_factor=2,
         status_forcelist=[500, 502, 503, 504],
         raise_on_status=False
     )
@@ -37,6 +58,10 @@ def create_http_session():
     session.mount('http://', adapter)
     return session
 
+
+# ---------------------------------------------------------------------------
+# PIPELINE PRINCIPAL DE INGESTÃO
+# ---------------------------------------------------------------------------
 def run_pipeline():
     status = "concluido"
     erros = None
@@ -44,14 +69,14 @@ def run_pipeline():
     total_lotes = 0
 
     try:
-        # Consulta por área (América do Sul / Brasil: BBOX -74,-34,-34,5)
+        # Bounding Box cobrindo a América do Sul / Brasil (-74,-34,-34,5)
         bbox = "-74,-34,-34,5"
         source = "VIIRS_SNPP_NRT"
         day_range = "1"
 
         url = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/{FIRMS_MAP_KEY}/{source}/{bbox}/{day_range}"
         
-        print("Consultando API NASA FIRMS...")
+        print("A consultar a API NASA FIRMS...")
         session = create_http_session()
         response = session.get(url, timeout=60)
 
@@ -60,7 +85,7 @@ def run_pipeline():
 
         csv_data = response.text.strip()
         if not csv_data or "latitude" not in csv_data:
-            print("Nenhum registro retornado do FIRMS para esta região/período.")
+            print("Nenhum registo retornado da NASA FIRMS para esta região/período.")
             records = []
         else:
             reader = csv.DictReader(io.StringIO(csv_data))
@@ -68,6 +93,7 @@ def run_pipeline():
             seen_keys = set()
 
             for row in reader:
+                # Chave única para evitar duplicados no mesmo ficheiro CSV
                 dedup_key = (
                     row.get('latitude'),
                     row.get('longitude'),
@@ -81,18 +107,18 @@ def run_pipeline():
                 seen_keys.add(dedup_key)
 
                 item = {
-                    "latitude": float(row['latitude']),
-                    "longitude": float(row['longitude']),
-                    "brightness": float(row['bright_ti4']) if row.get('bright_ti4') else None,
-                    "scan": float(row['scan']) if row.get('scan') else None,
-                    "track": float(row['track']) if row.get('track') else None,
-                    "acq_date": row['acq_date'],
-                    "acq_time": row['acq_time'],
+                    "latitude": safe_float(row.get('latitude')),
+                    "longitude": safe_float(row.get('longitude')),
+                    "brightness": safe_float(row.get('bright_ti4')),
+                    "scan": safe_float(row.get('scan')),
+                    "track": safe_float(row.get('track')),
+                    "acq_date": row.get('acq_date'),
+                    "acq_time": row.get('acq_time'),
                     "satellite": row.get('satellite', 'VIIRS'),
                     "confidence": row.get('confidence'),
                     "version": row.get('version'),
-                    "bright_t31": float(row['bright_ti5']) if row.get('bright_ti5') else None,
-                    "frp": float(row['frp']) if row.get('frp') else None,
+                    "bright_t31": safe_float(row.get('bright_ti5')),
+                    "frp": safe_float(row.get('frp')),
                     "daynight": row.get('daynight')
                 }
                 records.append(item)
@@ -100,7 +126,7 @@ def run_pipeline():
         total_registros = len(records)
         batch_size = 100
 
-        print(f"Total de registros obtidos: {total_registros}")
+        print(f"Total de registos obtidos: {total_registros}")
 
         if total_registros > 0:
             for i in range(0, total_registros, batch_size):
@@ -114,9 +140,9 @@ def run_pipeline():
     except Exception as e:
         status = "erro_critico"
         erros = str(e)
-        print(f"Falha durante execução do pipeline: {erros}")
+        print(f"Falha durante a execução do pipeline: {erros}")
 
-    # Registro do log na tabela 'execucoes' do Supabase
+    # Registo de log na tabela 'execucoes' do Supabase
     try:
         supabase.table("execucoes").insert({
             "registros_processados": total_registros,
@@ -126,10 +152,11 @@ def run_pipeline():
         }).execute()
         print(f"Execução finalizada e gravada com status: {status}")
     except Exception as log_err:
-        print(f"Erro ao salvar log no Supabase: {log_err}")
+        print(f"Erro ao guardar o log no Supabase: {log_err}")
 
     if status == "erro_critico":
         sys.exit(1)
+
 
 if __name__ == "__main__":
     run_pipeline()
